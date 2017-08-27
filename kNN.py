@@ -24,7 +24,7 @@ def create_dataset():
     Args:
     Returns:
         group: 训练样本集数据
-        labels: 数据对应的标签
+        labels: 数据对应的标签（分类）
     """
     group = array([[1.0, 1.1], [1.0, 1.0], [0, 0], [0, 0.1]])
     labels = ['A', 'A', 'B', 'B']
@@ -37,7 +37,7 @@ def classify0(inx, dataset, labels, k):
     Args:
         inx: 输入数据
         dataset: 训练样本集
-        labels: 标签
+        labels: 标签（分类）
         k: 前k个
     Returns:
         输入数据属于哪个分类
@@ -56,4 +56,73 @@ def classify0(inx, dataset, labels, k):
                                key=operator.itemgetter(1), reverse=True)  # 按字典值降序排列
 
     return sorted_classcount[0][0]  # 返回符合的分类
+
+
+def file2matrix(filename):
+    """准备数据 将文本记录转换为array
+
+    Args:
+        filename: 文件名
+    Returns:
+        返回处理后的（样本）数据/标签（分类）
+    """
+    fr = open(filename)
+    array_lines = fr.readlines()
+    number_lines = len(array_lines)
+    return_mat = zeros((number_lines, 3))  # 创建 n*3 数组
+    classlabel_vector = []
+    index = 0
+    for line in array_lines:
+        line = line.strip()  # 去除左右空格
+        list_fromline = line.split('\t')
+        return_mat[index, :] = list_fromline[0:3]  # 获取样本数据的各个特征值
+        classlabel_vector.append(int(list_fromline[-1]))  # 获取样本对应的分类
+        index += 1
+    return return_mat, classlabel_vector
+
+
+def autonorm(dataset):
+    """归一化特征值 newvalue = (oldvalue-min)/(max-min)
+
+    Args:
+        dataset: 数据集
+    Returns:
+        返回归一化处理后的数据
+    """
+    minvals = dataset.min()
+    maxvals = dataset.max()
+    ranges = maxvals - minvals
+    # norm_dataset = zeros(shape(dataset))
+    m = dataset.shape[0]  # 返回行数
+    norm_dataset = dataset - tile(minvals, (m, 1))  # minvals 为一行， 重复m行，1列
+    norm_dataset = norm_dataset/tile(ranges, (m, 1))  # ranges 列数据间距（为一行），重复m行，1列，各元素相除，归一化
+    return norm_dataset, ranges, minvals
+
+
+def datingclass_test():
+    """dating 分类器测试
+    """
+    ho_ratio = 0.10
+    dating_datamat, dating_labels = file2matrix('datingTestSet2.txt')
+    normmat, ranges, minvals = autonorm(dating_datamat)
+    m = normmat.shape[0]  # 总数据量 90%的训练数据
+    num_testvecs = int(m*ho_ratio)  # 10%测试数据量
+    error_count = 0.0
+    for i in range(num_testvecs):
+        classifier_result = classify0(normmat[i, :], normmat[num_testvecs:m, :],
+                                      dating_labels[num_testvecs:m], 3)
+        print "he classifier came back with: %d, the real answer is: %d" \
+            % (classifier_result, dating_labels[i])
+
+        if classifier_result != dating_labels[i]:
+            error_count += 1.0
+
+    print "the total error rate is %f" %(error_count/float(num_testvecs))
+
+
+
+
+
+
+
 
